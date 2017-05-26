@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">RemindersApp</string>
+    <string name="promise_prompt">Your promise for today is:</string>
+    <string name="btn_accept">I accept</string>
+    <string name="btn_new_suggestion">Give me a different suggestion</string>
+    <string name="promise_accepted_prompt">Your promise for today is</string>
+</resources>
