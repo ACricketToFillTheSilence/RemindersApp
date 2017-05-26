@@ -1,5 +1,6 @@
 package com.reminders.android.remindersapp;
 
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             promiseContentAccepted.setVisibility(View.GONE);
             promiseContentPrompt.setVisibility(View.VISIBLE);
-            loadNewPromise();
+            loadNextPromise();
         }
         findViewById(R.id.btn_accept).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -59,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_new_suggestion).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                loadNewPromise();
+                loadNextPromise();
             }
         });
     }
@@ -75,10 +76,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void logPromiseAcceptance() {
         mPromiseAccepted = true;
+        DatabaseHelper.getInstance(getApplicationContext()).logAction(
+                SystemClock.elapsedRealtime(), mPromise, DatabaseHelper.ACTION_ACCEPTED);
         // TODO: Set up the reminder and whatever.
     }
 
-    private void loadNewPromise() {
+    private void loadNextPromise() {
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         DatabaseReference myRef = database.getReference("PromiseList");
         // Read from the database
@@ -88,16 +91,17 @@ public class MainActivity extends AppCompatActivity {
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 for (DataSnapshot promiseSnapshot: dataSnapshot.getChildren()) {
-                    // TODO: handle the promise
-                    String promise = promiseSnapshot.getValue(String.class);
-                    Log.d(TAG, "Value is: " + promise);
+                    // TODO: handle the promise -- pick the next unused one!
+                    // Really shouldn't do this in a for loop...
+                    if (DatabaseHelper.getInstance(getApplicationContext()).containsPromise(
+                            promiseSnapshot.getKey())) {
+                        continue;
+                    }
+                    mPromise = promiseSnapshot.getValue(String.class);
+                    ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
+                    ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
+                    Log.d(TAG, "Value is: " + mPromise);
                 }
-                // TODO: Load a new promise that we haven't completed before.
-                mPromise = new Random().nextBoolean() ?
-                        "I promise not to eat a cute cat for dinner" :
-                        "I promise to tell Vega she rocks";
-                ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
-                ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
             }
 
             @Override
