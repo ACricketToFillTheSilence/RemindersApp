@@ -3,16 +3,25 @@ package com.reminders.android.remindersapp;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
     private static final String KEY_PROMISE = "key_promise";
     private static final String KEY_PROMISE_ACCEPTED = "key_promise_accepted";
+
     private String mPromise;
     private boolean mPromiseAccepted = false;
 
@@ -70,11 +79,33 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadNewPromise() {
-        // TODO: Load a new promise that we haven't completed before.
-        mPromise = new Random().nextBoolean() ? "I promise not to eat a cute cat for dinner" :
-                "I promise to tell Vega she rocks";
-        ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
-        ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference("PromiseList");
+        // Read from the database
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // This method is called once with the initial value and again
+                // whenever data at this location is updated.
+                for (DataSnapshot promiseSnapshot: dataSnapshot.getChildren()) {
+                    // TODO: handle the promise
+                    String promise = promiseSnapshot.getValue(String.class);
+                    Log.d(TAG, "Value is: " + promise);
+                }
+                // TODO: Load a new promise that we haven't completed before.
+                mPromise = new Random().nextBoolean() ?
+                        "I promise not to eat a cute cat for dinner" :
+                        "I promise to tell Vega she rocks";
+                ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
+                ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                // Failed to read value
+                Log.w(TAG, "Failed to read value.", error.toException());
+            }
+        });
     }
 
 
