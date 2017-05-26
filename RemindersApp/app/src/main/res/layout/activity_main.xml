@@ -64,6 +64,12 @@
             android:id="@+id/promise_content_accepted"
             />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/promise_tomorrow_reminder"
+            />
+
     </LinearLayout>
 
 </LinearLayout>
