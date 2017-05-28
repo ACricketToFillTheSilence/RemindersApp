@@ -71,18 +71,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     }
 
-    public void logAction(long timestamp, String promiseId, String promiseContents, int action) {
+    public void logAction(long timestamp, Promise promise, int action) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(PromiseActionColumns.TIMESTAMP, timestamp);
-        values.put(PromiseActionColumns.PROMISE_ID, promiseId);
+        values.put(PromiseActionColumns.PROMISE_ID, promise.getPromiseId());
         values.put(PromiseActionColumns.ACTION, action);
         db.insert(PROMISE_ACTIONS_TABLE_NAME, null, values);
 
         // TODO: Should this be in a separate call?
         ContentValues moreValues = new ContentValues();
-        moreValues.put(PromiseTableColumns.PROMISE_CONTENTS, promiseContents);
-        moreValues.put(PromiseTableColumns.PROMISE_ID, promiseId);
+        moreValues.put(PromiseTableColumns.PROMISE_CONTENTS, promise.getPromiseText());
+        moreValues.put(PromiseTableColumns.PROMISE_ID, promise.getPromiseId());
         db.insertWithOnConflict(PROMISE_TABLE_NAME, null, moreValues, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
@@ -97,7 +97,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Set<String> getAllPromiseIds() {
         Cursor c = getReadableDatabase().query(PROMISE_ACTIONS_TABLE_NAME,
                 new String[] {PromiseActionColumns.PROMISE_ID}, null, null, null, null, null);
-        //Cursor c = getReadableDatabase().rawQuery("SELECT " + PromiseTableColumns.PROMISE_ID + " FROM " + PROMISE_TABLE_NAME, null);
         Set<String> result = new HashSet<>();
         c.moveToFirst();
         while (c.moveToNext()) {
