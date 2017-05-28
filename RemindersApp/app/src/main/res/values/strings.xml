@@ -5,4 +5,7 @@
     <string name="btn_new_suggestion">Give me a different suggestion</string>
     <string name="promise_accepted_prompt">Your promise for today is</string>
     <string name="promise_tomorrow_reminder">Come back tomorrow for a new promise.</string>
+    <string name="btn_welcome_continue">Continue</string>
+    <string name="welcome_title">Welcome to the reminders app!</string>
+    <string name="welcome_msg">This app is going to remind you daily about how great cats are.</string>
 </resources>

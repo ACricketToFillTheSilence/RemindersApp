@@ -1,5 +1,7 @@
 package com.reminders.android.remindersapp;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
+    static final String SHARED_PREFS = "SharedPrefsFile";
+    static final String WELCOME_COMPLETED = "welcome_completed";
 
     private static final String TAG = "MainActivity";
     private static final String KEY_PROMISE = "key_promise";
@@ -33,6 +37,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!welcomeSeen()) {
+            Intent intent = new Intent(this, WelcomeActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_main);
 
         final ViewGroup promiseContentPrompt = (ViewGroup) findViewById(R.id.promise_prompt);
@@ -45,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
             ((TextView) findViewById(R.id.promise_content_accepted)).setText(
                     mPromise.getPromiseText());
             mPromiseAccepted = savedInstanceState.getBoolean(KEY_PROMISE_ACCEPTED);
+        } else {
+            FirebaseDatabase.getInstance().setPersistenceEnabled(true);
         }
         if (!mPromiseAccepted) {
             promiseContentAccepted.setVisibility(View.GONE);
@@ -56,6 +70,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         onPromiseLoadStateChanged();
+    }
+
+    private boolean welcomeSeen() {
+        return getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE).getBoolean(
+                MainActivity.WELCOME_COMPLETED, false);
     }
 
     @Override
