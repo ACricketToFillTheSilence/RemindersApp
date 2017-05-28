@@ -16,6 +16,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.Random;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_PROMISE_ACCEPTED = "key_promise_accepted";
 
     private String mPromise;
+    private String mPromiseId;
     private boolean mPromiseAccepted = false;
 
     @Override
@@ -39,14 +41,14 @@ public class MainActivity extends AppCompatActivity {
             ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
             ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
             mPromiseAccepted = savedInstanceState.getBoolean(KEY_PROMISE_ACCEPTED);
-            if (mPromiseAccepted) {
-                promiseContentAccepted.setVisibility(View.VISIBLE);
-                promiseContentPrompt.setVisibility(View.GONE);
-            }
-        } else {
+        }
+        if (!mPromiseAccepted) {
             promiseContentAccepted.setVisibility(View.GONE);
             promiseContentPrompt.setVisibility(View.VISIBLE);
             loadNextPromise();
+        } else {
+            promiseContentAccepted.setVisibility(View.VISIBLE);
+            promiseContentPrompt.setVisibility(View.GONE);
         }
         findViewById(R.id.btn_accept).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,30 +79,40 @@ public class MainActivity extends AppCompatActivity {
     private void logPromiseAcceptance() {
         mPromiseAccepted = true;
         DatabaseHelper.getInstance(getApplicationContext()).logAction(
-                SystemClock.elapsedRealtime(), mPromise, DatabaseHelper.ACTION_ACCEPTED);
+                SystemClock.elapsedRealtime(), mPromiseId, mPromise,
+                DatabaseHelper.ACTION_ACCEPTED);
         // TODO: Set up the reminder and whatever.
     }
 
     private void loadNextPromise() {
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference("PromiseList");
+        final DatabaseReference myRef = database.getReference("PromiseList");
         // Read from the database
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
+                // To avoid resetting when data is updated, we will check if the promise ID is set
+                // yet.
+                if (!TextUtils.isEmpty(mPromiseId)) {
+                    return;
+                }
+                Set<String> usedPromiseIds =
+                        DatabaseHelper.getInstance(getApplicationContext()).getAllPromiseIds();
                 for (DataSnapshot promiseSnapshot: dataSnapshot.getChildren()) {
                     // TODO: handle the promise -- pick the next unused one!
                     // Really shouldn't do this in a for loop...
-                    if (DatabaseHelper.getInstance(getApplicationContext()).containsPromise(
-                            promiseSnapshot.getKey())) {
+                    // and should do this
+                    if (usedPromiseIds.contains(promiseSnapshot.getKey())) {
                         continue;
                     }
+                    mPromiseId = promiseSnapshot.getKey();
                     mPromise = promiseSnapshot.getValue(String.class);
                     ((TextView) findViewById(R.id.promise_content)).setText(mPromise);
                     ((TextView) findViewById(R.id.promise_content_accepted)).setText(mPromise);
                     Log.d(TAG, "Value is: " + mPromise);
+                    break;
                 }
             }
 

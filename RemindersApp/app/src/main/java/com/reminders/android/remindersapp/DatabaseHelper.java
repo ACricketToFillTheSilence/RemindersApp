@@ -6,11 +6,15 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * DatabaseHelper for storing stuff locally.
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
+    private static final String PROMISE_ACTIONS_TABLE_NAME = "PromiseActionTable";
     private static final String PROMISE_TABLE_NAME = "PromiseTable";
 
     public static int ACTION_ACCEPTED = 1;
@@ -19,15 +23,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static int ACTION_NOT_COMPLETED_FORGOT = 4;
     public static int ACTION_NOT_COMPLETED_NO_OPPORTUNITY = 5;
 
-    private static class PromiseColumns {
-        public static String TIMESTAMP = "timestamp";
-        public static String PROMISE_ID = "promiseid";
-        public static String ACTION = "action";
+    private static class PromiseActionColumns {
+        static String TIMESTAMP = "timestamp";
+        static String PROMISE_ID = "promiseid";
+        static String ACTION = "action";
     }
 
-    private static final String PROMISE_TABLE_CREATE = "CREATE TABLE " + PROMISE_TABLE_NAME +
-            " (" + PromiseColumns.TIMESTAMP + " LONG, " + PromiseColumns.PROMISE_ID + " STRING, " +
-            PromiseColumns.ACTION + " INTEGER);";
+    public static class PromiseTableColumns {
+        static String PROMISE_ID = "promiseid";
+        static String PROMISE_CONTENTS = "promise";
+    }
+
+    private static final String PROMISE_ACTIONS_TABLE_CREATE = "CREATE TABLE " +
+            PROMISE_ACTIONS_TABLE_NAME + " (" + PromiseActionColumns.TIMESTAMP + " INTEGER, " +
+            PromiseActionColumns.PROMISE_ID + " STRING, " + PromiseActionColumns.ACTION +
+            " INTEGER);";
+
+    private static final String PROMISE_TABLE_CREATE = "CREATE TABLE " + PROMISE_TABLE_NAME + " (" +
+            PromiseTableColumns.PROMISE_ID + " STRING, " + PromiseTableColumns.PROMISE_CONTENTS +
+            " STRING);";
 
     private static DatabaseHelper sInstance;
 
@@ -43,11 +57,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public DatabaseHelper(Context context) {
-        super(context, PROMISE_TABLE_NAME, null, DATABASE_VERSION);
+        super(context, "PromiseDatabase", null, DATABASE_VERSION);
     }
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
+        sqLiteDatabase.execSQL(PROMISE_ACTIONS_TABLE_CREATE);
         sqLiteDatabase.execSQL(PROMISE_TABLE_CREATE);
     }
 
@@ -56,20 +71,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     }
 
-    public void logAction(long timestamp, String promiseId, int action) {
+    public void logAction(long timestamp, String promiseId, String promiseContents, int action) {
+        SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put(PromiseColumns.TIMESTAMP, timestamp);
-        values.put(PromiseColumns.PROMISE_ID, promiseId);
-        values.put(PromiseColumns.ACTION, action);
-        getWritableDatabase().insertWithOnConflict(PROMISE_TABLE_NAME, null, values,
-                SQLiteDatabase.CONFLICT_IGNORE);
+        values.put(PromiseActionColumns.TIMESTAMP, timestamp);
+        values.put(PromiseActionColumns.PROMISE_ID, promiseId);
+        values.put(PromiseActionColumns.ACTION, action);
+        db.insert(PROMISE_ACTIONS_TABLE_NAME, null, values);
+
+        // TODO: Should this be in a separate call?
+        ContentValues moreValues = new ContentValues();
+        moreValues.put(PromiseTableColumns.PROMISE_CONTENTS, promiseContents);
+        moreValues.put(PromiseTableColumns.PROMISE_ID, promiseId);
+        db.insertWithOnConflict(PROMISE_TABLE_NAME, null, moreValues, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     public boolean containsPromise(String promiseId) {
-        Cursor c = getReadableDatabase().rawQuery("SELECT " + PromiseColumns.ACTION + " FROM " +
-                PROMISE_TABLE_NAME + " WHERE " + PromiseColumns.PROMISE_ID + " = " + promiseId +
-                " LIMIT 1", null);
+        Cursor c = getReadableDatabase().rawQuery("SELECT * FROM " + PROMISE_TABLE_NAME +
+                " WHERE " + PromiseTableColumns.PROMISE_ID + " = " + promiseId, null);
         boolean result = c.getCount() > 0;
+        c.close();
+        return result;
+    }
+
+    public Set<String> getAllPromiseIds() {
+        Cursor c = getReadableDatabase().query(PROMISE_ACTIONS_TABLE_NAME,
+                new String[] {PromiseActionColumns.PROMISE_ID}, null, null, null, null, null);
+        //Cursor c = getReadableDatabase().rawQuery("SELECT " + PromiseTableColumns.PROMISE_ID + " FROM " + PROMISE_TABLE_NAME, null);
+        Set<String> result = new HashSet<>();
+        c.moveToFirst();
+        while (c.moveToNext()) {
+            result.add(c.getString(0));
+        }
         c.close();
         return result;
     }
